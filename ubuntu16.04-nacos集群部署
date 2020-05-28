@@ -1,0 +1,162 @@
+Nacos下载地址：
+https://github.com/alibaba/nacos/releases/download/1.2.0/nacos-server-1.2.0.tar.gz
+
+
+一、Nacos环境搭建（单节点）
+
+1、下载nacos资源包（以nacos-server-1.2.0.tar.gz为例）
+# wget https://github.com/alibaba/nacos/releases/download/1.2.0/nacos-server-1.2.0.tar.gz
+
+2、准备资源，解压资源包
+# mkdir /opt/module
+# tar -xvf nacos-server-1.2.0.tar.gz -C /opt/module/
+
+3、切换目录bin下查看
+# cd /opt/module/
+# ls
+
+4、java环境部署
+# java -version
+# apt install -y openjdk-8-jre-headless
+# java -version
+# apt install maven  # 安装检测JAVA_HOME软件包
+# mvn -v             # 检测JAVA_HOME入境
+/usr/lib/jvm/java-8-openjdk-amd64/jre
+
+# cd /opt/module/nacos/bin
+# vim startup.sh
+[ ! -e "$JAVA_HOME/bin/java" ] && JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
+#[ ! -e "$JAVA_HOME/bin/java" ] && JAVA_HOME=/usr/java
+#[ ! -e "$JAVA_HOME/bin/java" ] && JAVA_HOME=/opt/taobao/java
+#[ ! -e "$JAVA_HOME/bin/java" ] && unset JAVA_HOME
+修改完毕后，保存退出。
+
+
+5、配置自动启动脚本
+# vim /usr/lib/systemd/system/nacos.service
+#加入内容
+[Unit]
+Description=nacos
+After=network.target
+
+[Service]
+Type=forking
+#单节点方式启动
+ExecStart=bash -f /opt/module/nacos/bin/startup.sh -m standalone
+# 集群方式启动
+# ExecStart=bash -f /opt/module/nacos/bin/startup.sh
+ExecReload=/opt/module/nacos/bin/shutdown.sh
+ExecStop=/opt/module/nacos/bin/shutdown.sh
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+6、刷新配置
+# systemctl daemon-reload   # 刷新配置
+# systemctl enable nacos.service    # 开机自动启动nacos服务
+# systemctl  start|reload|stop  nacos.server
+# ss -antpul | grep 8848    # 查看服务是否启动
+
+7、（或者）手动启动
+# bash -f /opt/module/nacos/bin/startup.sh -m standalone  单机启动
+# bash -f /opt/module/nacos/bin/startup.sh       集群启动
+# /opt/module/nacos/bin/shutdown.sh      关闭nacos服务
+
+8、客户端连接测试
+浏览器访问：http://ip:8848/nacos
+默认账户：nacos
+默认密码：nacos
+
+
+二、Nacos集群规划
+1、主机规划
+192.168.1.110:8848
+192.168.1.154:8848
+192.168.1.156:8848
+
+2、mysql规划
+192.168.1.156   3306   5.7.30
+
+
+
+三、集群搭建
+
+1、参考上面单机版搭建步骤
+
+2、数据库搭建
+
+1）安装数据库
+# apt-get install -y mysql-server
+(安装过程中会弹出输入账号密码，这里默认都为root)
+# apt-get install -y mysql-client
+# apt install -y libmysqlclient-dev
+# ss -antpul | grep mysql
+
+2）修改mysql配置文件，让所有主机都有连接上去的权限
+# vim /etc/mysql/mysql.conf.d/mysqld.cnf
+# bind 127.0.0.1   #  将该行注释掉
+# service mysql restart
+
+3）新建数据库并导入nacos-mysql.sql脚本
+# mysql -uroot -proot
+> create database nacos_config;
+> grant all on *.* to root@'%' identified by 'root';
+#切换目录并导入脚本
+# cd /opt/module/nacos/conf
+# ls
+# mysql -uroot -proot nacos_config < nacos-mysql.sql     # 导入mysql数据
+# mysql -uroot -proot
+> use nacos_config;
+> show tables;         # 查看数据是否导入成功
+
+3、配置Nacos节点信息
+1）以192.168.1.110为例（后面两台机器都要操作）：
+# cd /opt/module/nacos/conf
+# cp cluster.conf.example cluster.conf
+
+2）编辑cluster.conf配置文件
+# vim cluster.conf     # 添加以下信息
+#it is ip
+#example
+192.168.1.110:8848
+192.168.1.154:8848
+192.168.1.156:8848
+
+3）配置数据节点信息
+# cd /opt/module/nacos/conf
+# vim application.properties
+3行  server.servlet.contextPath=/nacos
+5行  server.port=8848
+12行 nacos.inetutils.ip-address=192.168.1.154
+18行 spring.datasource.platform=mysql
+21行 db.num=1
+25行 db.url.0=jdbc:mysql://192.168.1.156:3306/nacos_config?useUnicode=true&characterEncoding=UTF-8&useSSL=false     # 添加25行
+26行 db.database=nacos_config
+27行 db.user=root
+28行 db.password=root
+
+
+4、启动集群(三台机器都需要启动)
+# bash -f /opt/module/nacos/bin/startup.sh
+
+5、查看集群节点信息
+http://192.168.1.110:8848/nacos
+http://192.168.1.154:8848/nacos
+http://192.168.1.156:8848/nacos
+
+
+6、或者：配置以集群方式启动
+#编辑命令
+vim /usr/lib/systemd/system/nacos.service
+
+修改
+ExecStart=/opt/module/nacos/bin/startup.sh -m standalone
+为：
+ExecStart=/opt/module/nacos/bin/startup.sh
+
+#刷新配置
+systemctl daemon-reload
+
+分别启动各节点
+systemctl  start|stop|reload nacos
