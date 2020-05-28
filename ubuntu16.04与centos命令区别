@@ -1,0 +1,30 @@
+第一周，完成以下任务配置：
+
+1.wiki帐号开通，查看运维部wiki内容，主要为私有云部分内容
+2.登陆vmware创建一台服务器系统为16.04 64位，并配置网络，网段为192.168.1.0/24 网>关为192.168.1.1
+3.查看资源并能够部署alibaba nacos；先部署单点，再部署集群
+
+
+
+Nacos下载地址：
+https://github.com/alibaba/nacos/releases/download/1.2.0/nacos-server-1.2.0.tar.gz
+
+
+命令区别：
+/etc/network/interfaces     网络配置文件
+sudo /etc/init.d/networking restart    重启网卡命令
+sudo ufw enable       打开防火墙
+sudo ufw disable      关闭防火墙
+sudo ufw status       查看防火墙状态
+
+sudo apt-get update    更新软件源
+JAVA -ersion           查看java版本
+mvn -v                 查看JAVA_HOME入境
+
+fping  -u -g  192.168.1.1 192.168.1.254    查询该网段未使用IP地址
+-a:  显示存活
+-u:  显示不存活
+-g： 显示范围
+
+安装sshd服务：
+# apt-get install -y openssh-server
