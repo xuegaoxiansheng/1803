@@ -1,0 +1,22 @@
+1、安装数据库命令：
+# sudo apt-get install mysql-server  (后面会弹出，输入数据库root密码)
+# sudo apt isntall mysql-client
+# sudo apt install libmysqlclient-dev
+
+2、安装完成后通过命令测试是否安装成功
+# sudo netstat -tap | grep mysql
+或
+# sudo ss -antpul | grep mysql   (会显示mysql及端口号)
+
+3、通过以下命令进入mysql
+# mysql -uroot -p密码
+
+4、现在设置mysql允许远程访问，首先编辑文件/etc/mysql/mysql.conf.d/mysqld.cnf：
+sudo vi /etc/mysql/mysql.conf.d/mysqld.cnf
+注释掉bind-address = 127.0.0.1：
+
+5、保存退出，然后进入mysql服务，执行授权命令：
+grant all on *.* to root@'%' identified by '你的密码' with grant option;
+flush privileges;
+然后执行quit命令退出mysql服务，执行如下命令重启mysql：
+service mysql restart
