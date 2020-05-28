@@ -1,0 +1,51 @@
+Nacos下载地址：
+https://github.com/alibaba/nacos/releases/download/1.2.0/nacos-server-1.2.0.tar.gz
+
+1、将下载的nacos-server-1.2.0.tar.gz安装包解压，
+# tar -xvf nacos-server-1.2.0.tar.gz
+
+2、进入解压文件nacos/bin
+# cd nacos/bin
+# ls
+
+3、启动nacosserver
+# bash -f ./startup.sh -m standalone
+
+4、客户端访问：
+http://192.168.1.110:8848/nacos/index.html
+
+注释：
+# sh startup.sh -m standalone  会出现报错
+./startup.sh: 78: ./startup.sh: [[: not found
+./startup.sh: 88: ./startup.sh: [[: not found
+./startup.sh: 90: ./startup.sh: [[: not found
+./startup.sh: 96: ./startup.sh: [[: not found
+/usr/lib/jvm/java-8-openjdk-amd64/bin/java  -server -Xms2g -Xmx2g -Xmn1g -XX:MetaspaceSize=128m 
+-XX:MaxMetaspaceSize=320m -XX:-OmitStackTraceInFastThrow -XX:+HeapDumpOnOutOfMemoryError 
+-XX:HeapDumpPath=/data/soft/nacos/logs/java_heapdump.hprof -XX:-UseLargePages 
+-Djava.ext.dirs=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/ext:/usr/lib/jvm/java-8-openjdk-amd64/lib/ext:
+/data/soft/nacos/plugins/cmdb:/data/soft/nacos/plugins/mysql -Xloggc:/data/soft/nacos/logs/nacos_gc.log -verbose:gc 
+-XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 
+-XX:GCLogFileSize=100M -Dnacos.home=/data/soft/nacos -jar /data/soft/nacos/target/nacos-server.jar  
+--spring.config.location=classpath:/,classpath:/config/,file:./,file:./config/,file:/data/soft/nacos/conf/ 
+--logging.config=/data/soft/nacos/conf/nacos-logback.xml
+./startup.sh: 116: ./startup.sh: [[: not found
+nacos is starting，you can check the /data/nacos/logs/start.out
+
+
+启动报错，解决方法：
+root@nacos:~/nacos/bin# sh startup.sh -m standalone
+readlink: missing operand
+Try 'readlink --help' for more information.
+dirname: missing operand
+Try 'dirname --help' for more information.
+ERROR: Please set the JAVA_HOME variable in your environment, We need java(x64)! jdk8 or later is better! !!
+
+解决方法：
+# 修改startup.sh配置文件
+[ ! -e "$JAVA_HOME/bin/java" ] && JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
+# JAVA_HOME入境查询：
+mvn -v
+
+建立软连接
+ln -l /usr/lib/jvm/java-8-openjdk-amd64/jre /usr/bin/java
