@@ -1,0 +1,171 @@
+一、Prometheus安装与配置
+
+1、Prometheus安装
+1）下载Prometheus软件包
+Prometheus官网下载对应软件包
+https://prometheus.io/download/
+# wget https://github.com/prometheus/prometheus/releases/download/v2.11.1/prometheus-2.11.1.linux-amd64.tar.gz
+
+2）解压软件包
+# tar -xvf prometheus-2.11.1.linux-amd64.tar.gz
+
+3)将软件包移动到服务器存放软件的目录,并进入目录
+# mv prometheus-2.11.1.linux-amd64 /usr/local/prometheus
+# cd /usr/local/prometheus
+
+4)默认配置为9090端口，可以通过修改prometheus.yml文件，修改配置(一般不需要修改)
+
+# vim prometheus.yml     yml文件，要遵循yml格式
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+    #可以修改页面访问端口
+    - targets: ['localhost:9090']
+
+5）修改完毕后，需要检查防火墙是否将使用到的端口开启（关闭防火墙即可）
+   启动prometheus
+# ./prometheus               # 默认是前台运行
+# nohup ./prometheus         # 通过守护进程运行，让程序在后台运行
+# ss -antpul | grep 9090     # 查看端口是否启动
+# 访问 http://ip:9090 即可使用
+
+
+
+或者
+配置启动文件
+# vim /etc/systemd/system/prometheus.service
+[Unit]
+Description=Prometheus Server
+After=network.target
+Documentation=https://prometheus.io/docs/introduction/overview/
+
+[Service]
+Type=simple
+WorkingDirectory=/home/data/prometheus/
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --web.read-timeout=5m \
+  --web.max-connections=512 \
+  --storage.tsdb.retention=15d \
+  --storage.tsdb.path=/home/data/prometheus \
+  --query.timeout=2m
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+# 启动
+systemctl daemon-reload
+systemctl start prometheus
+systemctl enable prometheus
+
+
+
+2、node_exporter简介及安装
+node_exporter用来安装到被监控的主机上，服务器端通过调用默认端口9100 来获取服务器
+信息
+
+1）安装node_exporter
+Prometheus官网下载对应软件包
+https://prometheus.io/download/
+
+下载对应平台软件包到服务器，并解压
+# wget https://github.com/prometheus/node_exporter/releases/download/v0.18.1/node_exporter-0.18.1.linux-amd64.tar.gz
+# tar -xvf node_exporter-0.18.1.linux-amd64.tar.gz
+
+2)将文件夹移动到软件安装目录
+# mv node_exporter-0.18.1.linux-amd64 /usr/local/node_exporter
+
+3)启动node_exporter
+# cd /usr/local/node_exporter
+# ./node_exporter             # 默认前台运行
+# nohup ./node_exporter &     # 通过守护进程的方式运行
+
+4）Prometheus 获取node_exporter信息（Prometheus如何获取其他节点数据）
+  通过配置Prometheus下的Prometheus.yml文件 获取node_exporter信息
+
+# cd /usr/local/prometheus
+# vim prometheus.yml    # 在尾部加入以下内容（注意yml格式）
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      #可以修改页面访问端口
+    - targets: ['localhost:9090']
+  - job_name: 'node1'
+    static_configs:
+      - targets: ['0.0.0.0:9100']
+  - job_name: 'node2'
+    static_configs:
+      - targets: ['0.0.0.0:9100']
+  - job_name: 'node3'
+    static_configs:
+      - targets: ['0.0.0.0:9100']
+
+# 通过添加节点 可以在Prometheus服务端取得节点信息
+
+或者
+配置启动文件
+# vim /etc/systemd/system/node_export.service
+[Unit]
+Description=Node Export
+After=network.target
+Documentation=https://prometheus.io/docs/guides/node-exporter/
+
+[Service]
+Type=simple
+WorkingDirectory=/tmp/
+ExecStart=/usr/local/bin/node_exporter
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+# 启动文件
+systemctl daemon-reload
+systemctl start node_export
+systemctl enable node_export
+
+
+
+二、更好的监控UI-Grafana安装
+
+1、安装Grafana：
+
+参考grafana官网地址：https://grafana.com/grafana/download/6.7.2
+
+# sudo apt-get install -y adduser libfontconfig1
+# wget https://dl.grafana.com/oss/release/grafana_6.7.2_amd64.deb
+# sudo dpkg -i grafana_6.7.2_amd64.deb
+
+2、启动grafana服务，并设置开机自动启动
+# systemctl start grafana-server
+# systemctl enable grafana-server
+# ss -antpul | grep 3000
+
+3、访问grafana页面
+# 访问 IP + Port，grafana 默认的启动 port 是 3000，初始账号和密码都是 admin，下>面是登陆之后的界面，我这里截图是已经配置好数据源的。
+
+4、配置数据源
+grafana支持的数据源很多，我们这里选择prometheus。
+因为我们的 grafana 和 prometheus 在同一台机器上面，地址填写 localhost:9090 即可>。点击 Save & Test
+
+5、导入模板
+开始我们可能不会制作模板，我们先导入一个模板，只需要输入其编号即可。更多的官方 Dashboard 请参见：（本次使用8919编号）
+https://grafana.com/grafana/dashboards?orderBy=name&direction=asc
+点击 左上方 + Create标志，拉到最下面import输入8919 保存。
+
+6、查看效果图，下图。
